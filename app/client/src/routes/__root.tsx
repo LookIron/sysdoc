@@ -1,11 +1,7 @@
-import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
+import { Link, Outlet } from '@tanstack/react-router'
 import { Activity } from 'lucide-react'
 
-export const Route = createRootRoute({
-  component: RootLayout,
-})
-
-function RootLayout() {
+export function RootLayout() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border/40 bg-background/95 backdrop-blur sticky top-0 z-50">

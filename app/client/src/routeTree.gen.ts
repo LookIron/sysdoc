@@ -1,16 +1,18 @@
-import { createRouter } from '@tanstack/react-router'
-import { Route as rootRoute } from './routes/__root'
-import { Route as IndexRoute } from './routes/index'
-import { Route as IssuesRoute } from './routes/issues'
-import { Route as MetricsRoute } from './routes/metrics'
-import { Route as StartupRoute } from './routes/startup'
+import { createRouter, createRootRoute, createRoute } from '@tanstack/react-router'
+import { RootLayout } from './routes/__root'
+import { DashboardRoute } from './routes/index'
+import { IssuesRoute } from './routes/issues'
+import { MetricsRoute } from './routes/metrics'
+import { StartupRoute } from './routes/startup'
 
-const routeTree = rootRoute.addChildren([
-  IndexRoute,
-  IssuesRoute,
-  MetricsRoute,
-  StartupRoute,
-])
+const rootRoute = createRootRoute({ component: RootLayout })
+
+const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: DashboardRoute })
+const issuesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/issues', component: IssuesRoute })
+const metricsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/metrics', component: MetricsRoute })
+const startupRoute = createRoute({ getParentRoute: () => rootRoute, path: '/startup', component: StartupRoute })
+
+const routeTree = rootRoute.addChildren([indexRoute, issuesRoute, metricsRoute, startupRoute])
 
 export const router = createRouter({ routeTree })
 
