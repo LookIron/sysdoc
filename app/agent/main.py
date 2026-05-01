@@ -1,4 +1,6 @@
 import argparse
+import datetime
+import json
 import platform
 import time
 import uuid
@@ -25,8 +27,10 @@ def load_or_create_machine_id() -> str:
     return machine_id
 
 
-def collect_all() -> dict:
+def collect_all(machine_id: str) -> dict:
     return {
+        "machine_id": machine_id,
+        "collected_at": datetime.datetime.utcnow().isoformat() + "Z",
         "cpu": cpu.collect(),
         "memory": memory.collect(),
         "disk": disk.collect(),
@@ -73,7 +77,9 @@ def run(debug: bool = False) -> None:
 
         if now - last_collect >= COLLECT_INTERVAL:
             try:
-                payload = collect_all()
+                payload = collect_all(machine_id)
+                if debug:
+                    print(f"[agent] payload:\n{json.dumps(payload, indent=2, default=str)}")
                 result = client.send_scan(payload)
                 if debug:
                     print(f"[agent] scan sent → health_score={result.get('health_score')}")
