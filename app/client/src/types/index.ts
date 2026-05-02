@@ -63,9 +63,11 @@ export interface FixResult {
 }
 
 export interface StartupItem {
+  id: string
   name: string
   path: string | null
   enabled: boolean
   source: string
-  category: 'essential' | 'useful' | 'ghost' | 'unknown' | 'suspicious'
+  category: 'essential' | 'useful' | 'slow' | 'ghost' | 'unknown' | 'suspicious'
+  boot_impact_s: number | null
 }

@@ -88,3 +88,58 @@ async def get_machine_issues(machine_id: str):
     )
 
     return issues.data or []
+
+
+BOOT_IMPACT: dict[str, int | None] = {
+    "essential": None,
+    "useful": 2,
+    "slow": 8,
+    "ghost": 0,
+    "unknown": None,
+    "suspicious": 4,
+}
+
+
+@router.get("/machines/{machine_id}/startup")
+async def get_startup(machine_id: str):
+    db = get_client()
+
+    machine = db.table("machines").select("id").eq("machine_id", machine_id).execute()
+    if not machine.data:
+        raise HTTPException(status_code=404, detail="Machine not found")
+
+    machine_uuid = machine.data[0]["id"]
+
+    scan = (
+        db.table("scans")
+        .select("raw_data")
+        .eq("machine_id", machine_uuid)
+        .order("scanned_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+
+    if not scan.data:
+        return {"items": [], "boot_time_estimate_s": 0}
+
+    raw = scan.data[0].get("raw_data") or {}
+    startup_data = raw.get("startup", {})
+    raw_items = startup_data.get("items", [])
+
+    items = []
+    for i, item in enumerate(raw_items):
+        cat = item.get("category", "unknown")
+        items.append({
+            "id": str(i),
+            "name": item.get("name", ""),
+            "path": item.get("path"),
+            "category": cat,
+            "boot_impact_s": BOOT_IMPACT.get(cat),
+            "enabled": item.get("enabled", True),
+            "source": item.get("source", ""),
+        })
+
+    enabled_items = [i for i in items if i["enabled"]]
+    boot_estimate = sum(i["boot_impact_s"] or 0 for i in enabled_items)
+
+    return {"items": items, "boot_time_estimate_s": boot_estimate}

@@ -1,4 +1,4 @@
-import type { DashboardData, Metric, Issue, ScanResult, FixResult } from '@/types'
+import type { DashboardData, Metric, Issue, ScanResult, FixResult, StartupItem } from '@/types'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -36,4 +36,8 @@ export async function triggerFix(machineId: string, issueId: string, fixCode: st
     method: 'POST',
     body: JSON.stringify({ issue_id: issueId, fix_code: fixCode }),
   })
+}
+
+export async function getStartup(machineId: string): Promise<{ items: StartupItem[]; boot_time_estimate_s: number }> {
+  return json(`/api/v1/machines/${machineId}/startup`)
 }
