@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -6,6 +7,7 @@ from db.supabase import get_client
 from services.analyzer import analyze
 from services.scorer import calculate
 from services.metrics_writer import extract
+from services.ai_explainer import generate_explanation
 
 router = APIRouter(prefix="/api/v1")
 
@@ -39,6 +41,28 @@ async def ingest_scan(machine_id: str, body: ScanBody):
 
     issues = analyze(payload)
     score_result = calculate(issues)
+
+    machine_row = db.table("machines").select("*").eq("id", machine_uuid).execute().data[0]
+
+    ai_explanation: str | None = None
+    if score_result.health_score < 70 and os.getenv("ANTHROPIC_API_KEY"):
+        scan_stub = {
+            "health_score": score_result.health_score,
+            "score_performance": score_result.score_performance,
+            "score_storage": score_result.score_storage,
+            "score_security": score_result.score_security,
+            "score_stability": score_result.score_stability,
+        }
+        issue_dicts = [
+            {"issue_code": i.code, "severity": i.severity, "title": i.title, "description": i.description}
+            for i in issues
+        ]
+        try:
+            ai_explanation, _ = await generate_explanation(machine_row, scan_stub, issue_dicts)
+        except Exception:
+            pass
+
+    payload["ai_explanation"] = ai_explanation
 
     scan = (
         db.table("scans")

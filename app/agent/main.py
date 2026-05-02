@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 from client import AgentClient
 from collectors import cpu, memory, disk, network, processes, startup
+from fixers import startup_fixer, disk_fixer, process_fixer
 
 load_dotenv()
 
@@ -53,6 +54,24 @@ def machine_info(machine_id: str) -> dict:
     }
 
 
+def _execute_fix(cmd: dict) -> tuple[bool, str]:
+    fix_code = cmd.get("fix_code", "")
+    params = cmd.get("params", {})
+
+    if fix_code in ("FIX_P04_GHOST", "FIX_STARTUP_TOGGLE"):
+        return startup_fixer.fix(params)
+    if fix_code == "FIX_P10_TRIM":
+        return disk_fixer.fix({"action": "trim"})
+    if fix_code == "FIX_CLR_TEMP":
+        return disk_fixer.fix({"action": "clear_temp"})
+    if fix_code == "FIX_P03_RESTART":
+        return process_fixer.fix(params)
+    if fix_code == "FIX_P01_INFO":
+        return True, "Thermal throttling info: clean vents and check thermal paste. No automated fix available."
+
+    return False, f"Unknown fix code: {fix_code}"
+
+
 def run(debug: bool = False) -> None:
     machine_id = load_or_create_machine_id()
     client = AgentClient(machine_id)
@@ -93,7 +112,11 @@ def run(debug: bool = False) -> None:
                 cmds = client.get_pending_commands()
                 for cmd in cmds:
                     if debug:
-                        print(f"[agent] fix command: {cmd}")
+                        print(f"[agent] executing fix: {cmd.get('fix_code')}")
+                    success, output = _execute_fix(cmd)
+                    client.report_fix_result(cmd["id"], success, output)
+                    if debug:
+                        print(f"[agent] fix result: success={success} output={output}")
             except Exception as e:
                 if debug:
                     print(f"[agent] fix poll error: {e}")
